@@ -184,7 +184,6 @@ return baseclass.extend({
 		else
 			mainLeft.style.width = ''
 
-		// 初始化设置，css后置设置导致刷新会闪现。
 		mainLeft.style.transition = 'visibility 2000ms, width 200ms';
 		mainLeft.style.visibility = open ? '' : 'visible';
 

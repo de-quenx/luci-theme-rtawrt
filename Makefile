@@ -5,7 +5,7 @@
 include $(TOPDIR)/rules.mk
 
 LUCI_TITLE:=RTA-WRT Theme
-LUCI_DEPENDS:=
+LUCI_DEPENDS:=+curl +jsonfilter
 PKG_VERSION:=1.0
 PKG_RELEASE:=05032025
 

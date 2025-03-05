@@ -1,25 +1,19 @@
-name: Release
+name: Build and Release Theme
 
 on:
-  push:
-    tags:
-      - "v*"
-  repository_dispatch:
   workflow_dispatch:
 
 jobs:
-  get-version:
+  build_ipk:
+    name: Build Theme RTA-WRT
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
-    outputs:
-      version: ${{ steps.version.outputs.version }}
+
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+      - name: Checkout Repository
+        uses: actions/checkout@v3
         with:
-          fetch-depth: 1
-          ref: ${{ github.ref_name }}
+          repository: ${{ github.repository }}
+          ref: ${{ github.ref }}
 
       - name: Extract version
         id: version
@@ -28,54 +22,35 @@ jobs:
           echo "version=${VERSION}" >> $GITHUB_OUTPUT
           echo "New Version: ${VERSION}"
 
-  build:
-    needs: get-version
-    runs-on: ubuntu-20.04
-    steps:
-      - name: Initialization Environment
+      - name: Preparing Build Environment
+        run: |
+          echo "Setting up the build environment..."
+          mkdir -p feeds/luci-theme-rtawrt artifacts
+          rsync -av --exclude='feeds/' --exclude='artifacts/' ./ ./feeds/luci-theme-rtawrt/
+          echo "Build environment setup complete."
+
+      - name: Building Luci Theme RTA-WRT
+        uses: openwrt/gh-action-sdk@main
         env:
-          DEBIAN_FRONTEND: noninteractive
-        run: |
-          echo -e "Total CPU cores\t: $(nproc)"
-          cat /proc/cpuinfo | grep 'model name'
-          free -h
-          uname -a
-          [ -f /proc/version ] && cat /proc/version
-          [ -f /etc/issue.net ] && cat /etc/issue.net
-          [ -f /etc/issue ] && cat /etc/issue
-          ulimit -a
+          ARCH: x86_64-23.05.5
+          ARTIFACTS_DIR: ${{ github.workspace }}/artifacts
+          FEED_DIR: ${{ github.workspace }}/feeds
+          PACKAGES: luci-theme-rtawrt
+          NO_SHFMT_CHECK: 1
 
-      - name: Download SDK
-        run: |
-          wget https://downloads.openwrt.org/releases/23.05.5/targets/x86/64/openwrt-sdk-23.05.5-x86-64_gcc-12.3.0_musl.Linux-x86_64.tar.xz
-          xz -d openwrt-sdk-23.05.5-x86-64_gcc-12.3.0_musl.Linux-x86_64.tar.xz
-          tar -xf openwrt-sdk-23.05.5-x86-64_gcc-12.3.0_musl.Linux-x86_64.tar
-          mv openwrt-sdk-23.05.5-x86-64_gcc-12.3.0_musl.Linux-x86_64 openwrt-sdk
-
-      - name: Build
-        id: build
-        run: |
-          cd openwrt-sdk
-          git clone  --depth=1 -b "${{ github.ref_name }}" https://github.com/rizkikotet-dev/luci-theme-rtawrt.git package/luci-theme-rtawrt
-          ./scripts/feeds update -a && ./scripts/feeds install -a
-          echo "CONFIG_PACKAGE_luci-theme-rtawrt=y" >> .config
-          make defconfig
-          make package/luci-theme-rtawrt/compile V=s -j$(nproc)
-          TARGET="$(find bin/ | grep  luci-theme-rtawrt)"
-          echo "TARGET=$(pwd)/$TARGET"
-          echo "TARGET=$(pwd)/$TARGET" >> $GITHUB_OUTPUT
-          echo "status=success" >> $GITHUB_OUTPUT
-
-      - name: Upload to release
-        uses: softprops/action-gh-release@v1
-        if: steps.build.outputs.status == 'success' && !cancelled()
-        env:
-          GITHUB_TOKEN: ${{ secrets.TOKEN }}
+      - name: Upload IPK Artifact
+        uses: actions/upload-artifact@v3
         with:
-          name: v${{ needs.get-version.outputs.version }}
-          tag_name: v${{ needs.get-version.outputs.version }}
-          prerelease: false
-          generate_release_notes: true
-          files: |
-            ${{ steps.build.outputs.TARGET }}
-            LICENSE
+          name: luci-theme-rtawrt
+          path: ${{ github.workspace }}/artifacts/bin/packages/*/action/luci-theme-rtawrt_*.ipk
+
+      - name: Upload Release Asset
+        uses: svenstaro/upload-release-action@v2
+        with:
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          file: ${{ github.workspace }}/artifacts/bin/packages/*/action/luci-theme-rtawrt_*.ipk
+          overwrite: true
+          tag: latest
+          file_glob: true
+          body: |
+            This is a new release of RTA-WRT theme.

@@ -23,7 +23,7 @@ jobs:
       - name: Extract version
         id: version
         run: |
-          VERSION=$(grep 'PKG_VERSION:=' ./luci-app-nikki/Makefile | awk -F '=' '{print $2}')
+          VERSION=$(grep 'PKG_VERSION:=' ./Makefile | awk -F '=' '{print $2}')
           echo "version=${VERSION}" >> $GITHUB_OUTPUT
           echo "New Version: ${VERSION}"
 

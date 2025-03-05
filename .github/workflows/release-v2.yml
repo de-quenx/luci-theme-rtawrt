@@ -32,6 +32,9 @@ jobs:
     needs: get-version
     runs-on: ubuntu-latest
     continue-on-error: true
+    strategy:
+      matrix:
+        arch: [x86_64-openwrt-24.10]
 
     steps:
       - name: checkout
@@ -41,12 +44,13 @@ jobs:
         uses: openwrt/gh-action-sdk@main
         env:
           ARCH: x86_64-openwrt-24.10
+          FEEDNAME: rtawrt
+          PACKAGES: luci-theme-rtawrt
           NO_REFRESH_CHECK: true
 
       - name: release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: "v${{ needs.get-version.outputs.version }}"
-          files: |
-            bin/packages/x86_64/packages/*.ipk
+          files: bin/packages/${{ matrix.arch }}/rtawrt .
           generate_release_notes: true

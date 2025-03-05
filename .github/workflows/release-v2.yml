@@ -1,56 +1,99 @@
-name: release-packages
+name: Compile The New Version RTA-THEME
 
 on:
-  workflow_dispatch:
   push:
-    tags:
-      - v*
+    branches:
+      - dev
+    paths:
+      - "Makefile"
+  workflow_dispatch:
 
 jobs:
-  get-version:
+  Get-Version:
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
     outputs:
       version: ${{ steps.version.outputs.version }}
     steps:
-      - name: Checkout repository
+      - name: Clone Repository
         uses: actions/checkout@v4
         with:
-          fetch-depth: 1
           ref: ${{ github.ref_name }}
 
-      - name: Extract version
+      - name: New Version
         id: version
         run: |
-          VERSION=$(grep 'PKG_VERSION:=' ./Makefile | awk -F '=' '{print $2}')
-          echo "version=${VERSION}" >> $GITHUB_OUTPUT
-          echo "New Version: ${VERSION}"
+          echo "version=$(grep 'PKG_VERSION:=' ./Makefile |awk -F '=' '{print $2}')" >> $GITHUB_OUTPUT
+          echo "New Version: $(grep 'PKG_VERSION:=' ./Makefile |awk -F '=' '{print $2}')"
 
-  release:
-    name: Build And Release
-    needs: get-version
+  Compile:
     runs-on: ubuntu-latest
-    continue-on-error: true
-    strategy:
-      matrix:
-        arch: [x86_64-openwrt-24.10]
-
+    needs: Get-Version
     steps:
-      - name: checkout
+      - name: Clone RTA-THEME dev Repository
         uses: actions/checkout@v4
-
-      - name: build
-        uses: openwrt/gh-action-sdk@main
-        env:
-          ARCH: x86_64-openwrt-24.10
-          FEEDNAME: rtawrt
-          PACKAGES: luci-theme-rtawrt
-          NO_REFRESH_CHECK: true
-
-      - name: release
-        uses: softprops/action-gh-release@v2
         with:
-          tag_name: "v${{ needs.get-version.outputs.version }}"
-          files: bin/packages/${{ matrix.arch }}/rtawrt .
+          ref: ${{ github.ref_name }}
+
+      - name: Apt Update
+        env:
+          DEBIAN_FRONTEND: noninteractive
+        run: |
+          sudo apt-get update
+          sudo apt-get -y install curl git tar zstd
+
+      - name: Install OpenWrt SDK
+        run: |
+          cd ..
+          mkdir tmp
+          curl -SLk --connect-timeout 30 --retry 2 "https://archive.openwrt.org/chaos_calmer/15.05.1/ar71xx/generic/OpenWrt-SDK-15.05.1-ar71xx-generic_gcc-4.8-linaro_uClibc-0.9.33.2.Linux-x86_64.tar.bz2" -o "./tmp/SDK.tar.bz2"
+          cd tmp
+          tar xjf SDK.tar.bz2
+          mv "OpenWrt-SDK-15.05.1-ar71xx-generic_gcc-4.8-linaro_uClibc-0.9.33.2.Linux-x86_64" "SDK"
+
+      - name: Install OpenWrt SNAPSHPT SDK
+        run: |
+          cd ..
+          curl -SLk --connect-timeout 30 --retry 2 "https://downloads.openwrt.org/snapshots/targets/x86/64/openwrt-sdk-x86-64_gcc-13.3.0_musl.Linux-x86_64.tar.zst" -o "./tmp/SNAPSDK.tar.zst"
+          cd tmp
+          zstd -d SNAPSDK.tar.zst
+          tar xf SNAPSDK.tar
+          mv "openwrt-sdk-x86-64_gcc-13.3.0_musl.Linux-x86_64" "SNAPSDK"
+
+      - name: Copy RTA-THEME Source Codes
+        run: |
+          cd ..
+          mkdir -p tmp/SDK/package/luci-theme-rtawrt
+          mkdir -p tmp/SNAPSDK/package/luci-theme-rtawrt
+          cp -rf "./luci-theme-rtawrt/." "./tmp/SDK/package/luci-theme-rtawrt/"
+          cp -rf "./luci-theme-rtawrt/." "./tmp/SNAPSDK/package/luci-theme-rtawrt/"
+
+      - name: Compile RTA-THEME IPK
+        run: |
+          cd ..
+          cd tmp/SDK
+          make package/luci-theme-rtawrt/compile V=99
+
+      - name: Compile RTA-THEME APK
+        run: |
+          cd ..
+          cd tmp/SNAPSDK
+          make defconfig
+          make package/luci-theme-rtawrt/compile V=99
+
+      - name: List Files for Debug
+        run: |
+          find ../tmp -name "*.ipk" || true
+          find ../tmp -name "*.apk" || true
+
+      - name: Upload to release
+        uses: softprops/action-gh-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.TOKEN }}
+        with:
+          name: v${{ needs.Get-Version.outputs.version }}
+          tag_name: v${{ needs.Get-Version.outputs.version }}
+          prerelease: false
           generate_release_notes: true
+          files: |
+            ../tmp/SDK/bin/ar71xx/packages/base/luci-theme-rtawrt_${{ needs.Get-Version.outputs.version }}_all.ipk
+            ../tmp/SNAPSDK/bin/packages/x86_64/base/luci-theme-rtawrt_${{ needs.Get-Version.outputs.version }}.ipk

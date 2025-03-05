@@ -10,7 +10,7 @@ jobs:
 
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           repository: ${{ github.repository }}
           ref: ${{ github.ref }}
@@ -37,12 +37,6 @@ jobs:
           FEED_DIR: ${{ github.workspace }}/feeds
           PACKAGES: luci-theme-rtawrt
           NO_SHFMT_CHECK: 1
-
-      - name: Upload IPK Artifact
-        uses: actions/upload-artifact@v3
-        with:
-          name: luci-theme-rtawrt
-          path: ${{ github.workspace }}/artifacts/bin/packages/*/action/luci-theme-rtawrt_*.ipk
 
       - name: Upload Release Asset
         uses: svenstaro/upload-release-action@v2

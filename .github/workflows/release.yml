@@ -1,103 +1,118 @@
-name: Build and Release Theme
+name: Release Packages
 
 on:
   workflow_dispatch:
+  push:
+    tags:
+      - "v*"
+
+env:
+  PACKAGE_NAME: luci-theme-rtawrt
 
 jobs:
-  build_theme:
-    name: Build Theme RTA-WRT
+  get-version:
     runs-on: ubuntu-latest
-
-    strategy:
-      matrix:
-        arch:
-          [
-            { name: "STABLE", version: "x86_64-23.05.5", ext: "ipk" },
-            { name: "SNAPSHOT", version: "x86_64-SNAPSHOT", ext: "apk" },
-          ]
-      fail-fast: false
-
+    permissions:
+      contents: write
+    outputs:
+      version: ${{ steps.version.outputs.version }}
     steps:
-      - name: Checkout Repository
+      - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+          ref: ${{ github.ref_name }}
 
       - name: Extract version
         id: version
         run: |
-          VERSION=$(grep 'PKG_VERSION:=' ./Makefile | awk -F '=' '{print $2}')
+          VERSION=$(grep 'PKG_VERSION:=' ./Makefile | awk -F '=' '{print $2}' | tr -d ' ')
           echo "version=${VERSION}" >> $GITHUB_OUTPUT
           echo "New Version: ${VERSION}"
 
-      - name: Preparing Build Environment
-        run: |
-          echo "Setting up the build environment for ${{ matrix.arch.name }}..."
-          mkdir -p feeds/luci-theme-rtawrt artifacts-${{ matrix.arch.ext }}
-          rsync -av --exclude='feeds/' --exclude='artifacts-*/' ./ ./feeds/luci-theme-rtawrt/
-          echo "Build environment setup complete."
-
-      - name: Building Luci Theme RTA-WRT ${{ matrix.arch.name }}
-        uses: openwrt/gh-action-sdk@main
-        env:
-          ARCH: ${{ matrix.arch.version }}
-          ARTIFACTS_DIR: ${{ github.workspace }}/artifacts-${{ matrix.arch.ext }}
-          FEED_DIR: ${{ github.workspace }}/feeds
-          PACKAGES: luci-theme-rtawrt
-          NO_SHFMT_CHECK: 1
-
-      - name: Upload Build Artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: luci-theme-rtawrt-${{ matrix.arch.name }}
-          path: ${{ github.workspace }}/artifacts-${{ matrix.arch.ext }}/bin/packages/*/action/luci-theme-rtawrt_*
-
   release:
-    name: Create GitHub Release
-    needs: build_theme
+    name: Release ${{ matrix.arch }}-${{ matrix.branch }}
+    needs: get-version
     runs-on: ubuntu-latest
+    continue-on-error: true
+    strategy:
+      fail-fast: false
+      matrix:
+        arch:
+          - x86_64
+        branch:
+          - openwrt-24.10
+          - SNAPSHOT
 
     steps:
-      - name: Checkout Repository
+      - name: Checkout repository
         uses: actions/checkout@v4
-
-      - name: Extract version
-        id: version
-        run: |
-          VERSION=$(grep 'PKG_VERSION:=' ./Makefile | awk -F '=' '{print $2}')
-          echo "version=${VERSION}" >> $GITHUB_OUTPUT
-
-      - name: Download All Artifacts
-        uses: actions/download-artifact@v4
         with:
-          path: ./artifacts
+          fetch-depth: 1
 
-      - name: Prepare Release Files
+      - name: Set up build environment
         run: |
-          mkdir -p release-files
-          find ./artifacts -type f -name "luci-theme-rtawrt_*" -exec cp {} ./release-files/ \;
-          ls -la ./release-files/
+          echo "::group::Setting up build environment for ${{ matrix.arch }}-${{ matrix.branch }}"
+          mkdir -p feeds/${{ env.PACKAGE_NAME }} artifacts
+          rsync -av --exclude='.git/' --exclude='feeds/' --exclude='artifacts/' ./ ./feeds/${{ env.PACKAGE_NAME }}/
+          echo "::endgroup::"
 
-      - name: Create GitHub Release
+      - name: Build package
+        uses: openwrt/gh-action-sdk@main
+        env:
+          ARCH: ${{ matrix.arch }}-${{ matrix.branch }}
+          ARTIFACTS_DIR: ${{ github.workspace }}/artifacts
+          FEED_DIR: ${{ github.workspace }}/feeds
+          PACKAGES: ${{ env.PACKAGE_NAME }}
+          NO_REFRESH_CHECK: true
+
+      - name: List built packages
+        run: |
+          find ${{ github.workspace }}/artifacts -type f -name "${{ env.PACKAGE_NAME }}*.ipk" -o -name "${{ env.PACKAGE_NAME }}*.apk" | sort
+          echo "::endgroup::"
+
+      - name: Prepare release artifacts
+        run: |
+          # Create release artifacts directory
+          mkdir -p ${{ github.workspace }}/release-artifacts
+
+          # Handle different file extensions based on branch
+          if [[ "${{ matrix.branch }}" == "SNAPSHOT" ]]; then
+            # For SNAPSHOT branch - copy APK files
+            find ${{ github.workspace }}/artifacts/bin/packages -name "${{ env.PACKAGE_NAME }}*.apk" -exec cp {} ${{ github.workspace }}/release-artifacts/ \; || true
+            find ${{ github.workspace }}/artifacts/bin/targets -name "${{ env.PACKAGE_NAME }}*.apk" -exec cp {} ${{ github.workspace }}/release-artifacts/ \; || true
+          else
+            # For other branches - copy IPK files
+            find ${{ github.workspace }}/artifacts/bin/packages -name "${{ env.PACKAGE_NAME }}*.ipk" -exec cp {} ${{ github.workspace }}/release-artifacts/ \; || true
+            find ${{ github.workspace }}/artifacts/bin/targets -name "${{ env.PACKAGE_NAME }}*.ipk" -exec cp {} ${{ github.workspace }}/release-artifacts/ \; || true
+          fi
+
+          # Debug: list contents
+          echo "Contents of release-artifacts directory:"
+          ls -la ${{ github.workspace }}/release-artifacts/
+
+      - name: Upload release artifacts
         uses: softprops/action-gh-release@v2
         with:
-          files: ./release-files/*
-          tag_name: v${{ steps.version.outputs.version }}
+          tag_name: "v${{ needs.get-version.outputs.version }}"
+          files: |
+            ${{ github.workspace }}/release-artifacts/*
+          generate_release_notes: true
+          draft: false
+          name: "v${{ needs.get-version.outputs.version }} Release"
           body: |
-            ## RTA-WRT Theme v${{ steps.version.outputs.version }}
+            ## Release v${{ needs.get-version.outputs.version }}
 
-            ### Available Files:
-            - STABLE build
-            - SNAPSHOT build
+            ### Packages
+            Packages are available for the following configurations:
 
             ### Installation
-            Install via LuCI web interface or command line:
-            ```bash
-            opkg install luci-theme-rtawrt_*.ipk
+            For standard OpenWrt (IPK):
+            ```
+            opkg install ${{ env.PACKAGE_NAME }}_${{ needs.get-version.outputs.version }}_*.ipk
             ```
 
-            ```bash
-            apk add --allow-untrusted luci-theme-rtawrt_*.apk
+            For SNAPSHOT (APK):
             ```
-
-            ### Changelog
-            - Initial release of RTA-WRT Theme.
-            - Added support for both STABLE and SNAPSHOT builds.
+            apk add ${{ env.PACKAGE_NAME }}_${{ needs.get-version.outputs.version }}_*.apk
+            ```

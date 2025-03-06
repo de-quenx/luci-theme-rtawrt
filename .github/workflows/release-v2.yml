@@ -71,41 +71,44 @@ jobs:
 
       - name: Prepare release artifacts
         run: |
-          mkdir -p release-artifacts
+          # Create release artifacts directory
+          mkdir -p ${{ github.workspace }}/release-artifacts
 
           # Handle different file extensions based on branch
           if [[ "${{ matrix.branch }}" == "SNAPSHOT" ]]; then
             # For SNAPSHOT branch - copy APK files
-            find ${{ github.workspace }}/artifacts/bin/packages -name "*.apk" -exec cp {} release-artifacts/ \;
-            find ${{ github.workspace }}/artifacts/bin/targets -name "*.apk" -exec cp {} release-artifacts/ \;
+            find ${{ github.workspace }}/artifacts/bin/packages -name "*.apk" -exec cp {} ${{ github.workspace }}/release-artifacts/ \; || true
+            find ${{ github.workspace }}/artifacts/bin/targets -name "*.apk" -exec cp {} ${{ github.workspace }}/release-artifacts/ \; || true
             
-            # Add arch and branch info to filenames
-            cd release-artifacts
+            # Add arch and branch info to filenames (remain in the workspace directory)
+            cd ${{ github.workspace }}/release-artifacts
             for f in *.apk; do
               [ -f "$f" ] || continue
               mv "$f" "${f%.apk}_${{ matrix.arch }}_${{ matrix.branch }}.apk"
             done
           else
             # For other branches - copy IPK files
-            find ${{ github.workspace }}/artifacts/bin/packages -name "*.ipk" -exec cp {} release-artifacts/ \;
-            find ${{ github.workspace }}/artifacts/bin/targets -name "*.ipk" -exec cp {} release-artifacts/ \;
+            find ${{ github.workspace }}/artifacts/bin/packages -name "*.ipk" -exec cp {} ${{ github.workspace }}/release-artifacts/ \; || true
+            find ${{ github.workspace }}/artifacts/bin/targets -name "*.ipk" -exec cp {} ${{ github.workspace }}/release-artifacts/ \; || true
             
-            # Add arch and branch info to filenames
-            cd release-artifacts
+            # Add arch and branch info to filenames (remain in the workspace directory)
+            cd ${{ github.workspace }}/release-artifacts
             for f in *.ipk; do
               [ -f "$f" ] || continue
               mv "$f" "${f%.ipk}_${{ matrix.arch }}_${{ matrix.branch }}.ipk"
             done
           fi
 
-          ls -la release-artifacts/
+          # Debug: list contents
+          echo "Contents of release-artifacts directory:"
+          ls -la ${{ github.workspace }}/release-artifacts/
 
       - name: Upload release artifacts
         uses: softprops/action-gh-release@v2
         with:
           tag_name: "v${{ needs.get-version.outputs.version }}"
           files: |
-            release-artifacts/*
+            ${{ github.workspace }}/release-artifacts/*
           generate_release_notes: true
           draft: false
           name: "v${{ needs.get-version.outputs.version }} Release"

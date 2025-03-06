@@ -13,7 +13,7 @@ jobs:
         arch:
           [
             { name: "STABLE", version: "x86_64-23.05.5", ext: "ipk" },
-            { name: "SNAPSHOT", version: "x86_64-SNAPSHOT", ext: "ipk" },
+            { name: "SNAPSHOT", version: "x86_64-SNAPSHOT", ext: "apk" },
           ]
       fail-fast: false
 

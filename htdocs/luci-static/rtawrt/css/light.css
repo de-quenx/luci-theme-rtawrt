@@ -49,47 +49,6 @@
     --scrollbarColor: #e0e0e0; /* Scrollbar color */
 }
 
-@media (prefers-color-scheme: dark) {
-    :root {
-        --bg: #121212; /* Dark background */
-        --mainbg: #1e1e1e; /* Main background */
-        --bgwhite: #1e1e1e; /* Background for white elements */
-        --activeColor: #5ea69b; /* Active color */
-        --activeBottom: #51c291 2px solid; /* Active bottom border */
-        --textColor: #e0e0e0; /* Light text color */
-        --borderColor: rgba(255, 255, 255, 0.15); /* Light border color */
-        --navbgColor: rgba(30, 30, 30, 0.7); /* Navigation background */
-        --navBorder: 1px solid #444; /* Navigation border */
-        --sectionbgColor: #1e1e1e; /* Section background */
-        --sectionbgColor2: #2a2a2a; /* Alternate section background */
-        --sectionShaddow: 3px 3px 3px rgba(0, 0, 0, 0.5); /* Section shadow */
-        --sectionBorder: 1px solid #444; /* Section border */
-        --sectiontabBorder: 1px solid #444; /* Section tab border */
-        --tabmenuBorderLR: 1px solid #444; /* Tab menu border */
-        --tabmenubgColor: #1e1e1e; /* Tab menu background */
-        --tabmenuBottom: #444 1px solid; /* Tab menu bottom border */
-        --tabmenuRadius: 0; /* Tab menu radius */
-        --sectionnodeBorder: #444 1px solid; /* Section node border */
-        --cbilineColor: #444 1px solid; /* CBI line color */
-        --tabbgColor: #1e1e1e; /* Tab background color */
-        --inputbgColor: #2a2a2a; /* Input background color */
-        --inputtextColor: #e0e0e0; /* Input text color */
-        --inputBorder: 1px solid #444; /* Input border */
-        --mainleftbgColor: #1e1e1e; /* Main left background */
-        --bttextColor: #fff; /* Button text color */
-        --badgebgColor: #2a2a2a; /* Badge background color */
-        --badgeBorder: #444 1px solid; /* Badge border */
-        --progressbarColor: #444; /* Progress bar color */
-        --progressbar: #5ea69b; /* Progress bar fill color */
-        --progressbartxtColor: #fff; /* Progress bar text color */
-        --logo_color: #e0e0e0; /* Logo color */
-        --alertColor: #ffffff; /* Alert text color */
-        --alertBackground: #333; /* Alert background color */
-        --modelBackground: #2a2a2a; /* Modal background */
-        --scrollbarColor: #444; /* Scrollbar color */
-    }
-}
-
 @font-face {
     font-family: 'icomoon';
     src: url('../fonts/font.eot');

@@ -19,18 +19,33 @@
 -%>
 
 <%
-	local sys  = require "luci.sys"
+	local sys = require "luci.sys"
 	local util = require "luci.util"
 	local http = require "luci.http"
 	local disp = require "luci.dispatcher"
-	local ver  = require "luci.version"
+	local ver = require "luci.version"
 
-	local boardinfo = util.ubus("system", "board") or { }
+	local boardinfo = util.ubus("system", "board")
 
 	local node = disp.context.dispatched
-	local path = table.concat(disp.context.path, "-")
 
-	http.prepare_content("text/html; charset=UTF-8")
+	local fs = require "nixio.fs"
+	local nutil = require "nixio.util"
+	local uci = require 'luci.model.uci'.cursor()
+
+	-- send as HTML5
+	http.prepare_content("text/html")
+
+	math.randomseed(os.time())
+
+	-- Custom settings
+	local mode = 'normal'
+	if fs.access('/etc/config/rtawrt') then
+		mode = uci:get_first('rtawrt', 'global', 'mode')
+	end
+
+	-- Brand name
+	local brand_name = boardinfo.hostname or "?"
 -%>
 <!DOCTYPE html>
 <html lang="<%=luci.i18n.context.lang%>">
@@ -57,7 +72,13 @@
 	<meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-touch-fullscreen" content="yes" /> 
 	<meta name="msapplication-TileColor" content="#09c">
+	<% if mode == 'normal' then %>
 	<link rel="stylesheet" href="<%=media%>/css/style.css?v=<%= ver.luciversion %>">
+	<% elseif mode == 'light' then %>
+	<link rel="stylesheet" href="<%=media%>/css/light.css?v=<%= ver.luciversion %>">
+	<% elseif mode == 'dark' then %>
+	<link rel="stylesheet" href="<%=media%>/css/dark.css?v=<%= ver.luciversion %>">
+	<% end -%>
 	<script src="<%=media%>/js/jquery.min.js?v=3.5.1"></script>
 	<link rel="shortcut icon" href="<%=media%>/favicon.ico">
 	<% if node and node.css then %>

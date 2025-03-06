@@ -6,6 +6,9 @@ on:
     tags:
       - "v*"
 
+Env:
+  PACKAGE_NAME: luci-theme-rtawrt
+
 jobs:
   get-version:
     runs-on: ubuntu-latest
@@ -50,8 +53,8 @@ jobs:
       - name: Set up build environment
         run: |
           echo "::group::Setting up build environment for ${{ matrix.arch }}-${{ matrix.branch }}"
-          mkdir -p feeds/luci-theme-rtawrt artifacts
-          rsync -av --exclude='.git/' --exclude='feeds/' --exclude='artifacts/' ./ ./feeds/luci-theme-rtawrt/
+          mkdir -p feeds/${{ env.PACKAGE_NAME }} artifacts
+          rsync -av --exclude='.git/' --exclude='feeds/' --exclude='artifacts/' ./ ./feeds/${{ env.PACKAGE_NAME }}/
           echo "::endgroup::"
 
       - name: Build package
@@ -60,7 +63,7 @@ jobs:
           ARCH: ${{ matrix.arch }}-${{ matrix.branch }}
           ARTIFACTS_DIR: ${{ github.workspace }}/artifacts
           FEED_DIR: ${{ github.workspace }}/feeds
-          PACKAGES: luci-theme-rtawrt
+          PACKAGES: ${{ env.PACKAGE_NAME }}
           NO_REFRESH_CHECK: true
 
       - name: List built packages
@@ -121,10 +124,10 @@ jobs:
             ### Installation
             For standard OpenWrt (IPK):
             ```
-            opkg install luci-theme-rtawrt_${{ needs.get-version.outputs.version }}_*.ipk
+            opkg install ${{ env.PACKAGE_NAME }}_${{ needs.get-version.outputs.version }}_*.ipk
             ```
 
             For SNAPSHOT (APK):
             ```
-            apk add luci-theme-rtawrt_${{ needs.get-version.outputs.version }}_*.apk
+            apk add ${{ env.PACKAGE_NAME }}_${{ needs.get-version.outputs.version }}_*.apk
             ```

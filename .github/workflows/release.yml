@@ -38,13 +38,16 @@ jobs:
           PACKAGES: luci-theme-rtawrt
           NO_SHFMT_CHECK: 1
 
-      - name: Upload Release Asset
-        uses: svenstaro/upload-release-action@v2
+      - name: Upload IPK Artifact
+        uses: actions/upload-artifact@v4
         with:
-          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          name: luci-theme-rtawrt
+          path: ${{ github.workspace }}/artifacts/bin/packages/*/action/luci-theme-rtawrt_*.ipk
+
+      - name: Upload Release Asset
+        uses: softprops/action-gh-release@v2
+        with:
           file: ${{ github.workspace }}/artifacts/bin/packages/*/action/luci-theme-rtawrt_*.ipk
-          overwrite: true
-          tag: latest
-          file_glob: true
+          tag_name: ${{ steps.version.outputs.version }}
           body: |
             This is a new release of RTA-WRT theme.

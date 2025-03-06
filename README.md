@@ -23,3 +23,7 @@ Guidelines for contributing to the project.
 ## License
 
 Licensed to the public under the Apache License 2.0.
+
+## Original Source
+
+This theme is based on the original theme by [0x676e67](https://github.com/0x676e67/luci-theme-design)

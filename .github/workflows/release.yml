@@ -4,16 +4,22 @@ on:
   workflow_dispatch:
 
 jobs:
-  build_ipk:
+  build_theme:
     name: Build Theme RTA-WRT
     runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        arch:
+          [
+            { name: "STABLE", version: "x86_64-23.05.5", ext: "ipk" },
+            { name: "SNAPSHOT", version: "x86_64-SNAPSHOT", ext: "ipk" },
+          ]
+      fail-fast: false
 
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
-        with:
-          repository: ${{ github.repository }}
-          ref: ${{ github.ref }}
 
       - name: Extract version
         id: version
@@ -24,30 +30,70 @@ jobs:
 
       - name: Preparing Build Environment
         run: |
-          echo "Setting up the build environment..."
-          mkdir -p feeds/luci-theme-rtawrt artifacts
-          rsync -av --exclude='feeds/' --exclude='artifacts/' ./ ./feeds/luci-theme-rtawrt/
+          echo "Setting up the build environment for ${{ matrix.arch.name }}..."
+          mkdir -p feeds/luci-theme-rtawrt artifacts-${{ matrix.arch.ext }}
+          rsync -av --exclude='feeds/' --exclude='artifacts-*/' ./ ./feeds/luci-theme-rtawrt/
           echo "Build environment setup complete."
 
-      - name: Building Luci Theme RTA-WRT
+      - name: Building Luci Theme RTA-WRT ${{ matrix.arch.name }}
         uses: openwrt/gh-action-sdk@main
         env:
-          ARCH: x86_64-23.05.5
-          ARTIFACTS_DIR: ${{ github.workspace }}/artifacts
+          ARCH: ${{ matrix.arch.version }}
+          ARTIFACTS_DIR: ${{ github.workspace }}/artifacts-${{ matrix.arch.ext }}
           FEED_DIR: ${{ github.workspace }}/feeds
           PACKAGES: luci-theme-rtawrt
           NO_SHFMT_CHECK: 1
 
-      - name: Upload IPK Artifact
+      - name: Upload Build Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: luci-theme-rtawrt
-          path: ${{ github.workspace }}/artifacts/bin/packages/*/action/luci-theme-rtawrt_*.ipk
+          name: luci-theme-rtawrt-${{ matrix.arch.name }}
+          path: ${{ github.workspace }}/artifacts-${{ matrix.arch.ext }}/bin/packages/*/action/luci-theme-rtawrt_*
+
+  release:
+    name: Create GitHub Release
+    needs: build_theme
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Extract version
+        id: version
+        run: |
+          VERSION=$(grep 'PKG_VERSION:=' ./Makefile | awk -F '=' '{print $2}')
+          echo "version=${VERSION}" >> $GITHUB_OUTPUT
+
+      - name: Download All Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: ./artifacts
+
+      - name: Prepare Release Files
+        run: |
+          mkdir -p release-files
+          find ./artifacts -type f -name "luci-theme-rtawrt_*" -exec cp {} ./release-files/ \;
+          ls -la ./release-files/
 
       - name: Upload Release Asset
         uses: softprops/action-gh-release@v2
         with:
-          file: ${{ github.workspace }}/artifacts/bin/packages/*/action/luci-theme-rtawrt_*.ipk
-          tag_name: ${{ steps.version.outputs.version }}
+          files: ./release-files/*
+          tag_name: v${{ steps.version.outputs.version }}
           body: |
-            This is a new release of RTA-WRT theme.
+            ## RTA-WRT Theme v${{ steps.version.outputs.version }}
+
+            ### Available Files:
+            - STABLE build
+            - SNAPSHOT build
+
+            ### Installation
+            Install via LuCI web interface or command line:
+            ```
+            opkg install luci-theme-rtawrt_*.ipk
+            ```
+
+            ```
+            apk add --allow-untrusted luci-theme-rtawrt_*.ipk
+            ```

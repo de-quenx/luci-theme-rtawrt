@@ -6,7 +6,7 @@ on:
     tags:
       - "v*"
 
-Env:
+env:
   PACKAGE_NAME: luci-theme-rtawrt
 
 jobs:

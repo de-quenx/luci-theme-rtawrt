@@ -76,7 +76,7 @@ jobs:
           find ./artifacts -type f -name "luci-theme-rtawrt_*" -exec cp {} ./release-files/ \;
           ls -la ./release-files/
 
-      - name: Upload Release Asset
+      - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           files: ./release-files/*
@@ -90,10 +90,14 @@ jobs:
 
             ### Installation
             Install via LuCI web interface or command line:
-            ```
+            ```bash
             opkg install luci-theme-rtawrt_*.ipk
             ```
 
+            ```bash
+            apk add --allow-untrusted luci-theme-rtawrt_*.apk
             ```
-            apk add --allow-untrusted luci-theme-rtawrt_*.ipk
-            ```
+
+            ### Changelog
+            - Initial release of RTA-WRT Theme.
+            - Added support for both STABLE and SNAPSHOT builds.

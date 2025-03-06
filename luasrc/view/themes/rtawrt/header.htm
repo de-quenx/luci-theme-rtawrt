@@ -18,34 +18,29 @@
 	Licensed to the public under the Apache License 2.0
 -%>
 
+
 <%
-	local sys = require "luci.sys"
+	local sys  = require "luci.sys"
 	local util = require "luci.util"
 	local http = require "luci.http"
 	local disp = require "luci.dispatcher"
-	local ver = require "luci.version"
-
-	local boardinfo = util.ubus("system", "board")
-
-	local node = disp.context.dispatched
-
+	local ver  = require "luci.version"
 	local fs = require "nixio.fs"
 	local nutil = require "nixio.util"
 	local uci = require 'luci.model.uci'.cursor()
 
-	-- send as HTML5
-	http.prepare_content("text/html")
+	local boardinfo = util.ubus("system", "board") or { }
 
-	math.randomseed(os.time())
+	local node = disp.context.dispatched
+	local path = table.concat(disp.context.path, "-")
+
+	http.prepare_content("text/html; charset=UTF-8")
 
 	-- Custom settings
 	local mode = 'normal'
 	if fs.access('/etc/config/rtawrt') then
 		mode = uci:get_first('rtawrt', 'global', 'mode')
 	end
-
-	-- Brand name
-	local brand_name = boardinfo.hostname or "?"
 -%>
 <!DOCTYPE html>
 <html lang="<%=luci.i18n.context.lang%>">

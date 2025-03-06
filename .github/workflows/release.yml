@@ -30,6 +30,30 @@ jobs:
           echo "version=${VERSION}" >> $GITHUB_OUTPUT
           echo "New Version: ${VERSION}"
 
+      - name: Upload release artifacts
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: "v${{ needs.get-version.outputs.version }}"
+          generate_release_notes: true
+          draft: false
+          name: "v${{ needs.get-version.outputs.version }} Release"
+          body: |
+            ## Release v${{ needs.get-version.outputs.version }}
+
+            ### Packages
+            Packages are available for the following configurations:
+
+            ### Installation
+            For standard OpenWrt (IPK):
+            ```
+            opkg install ${{ env.PACKAGE_NAME }}_${{ needs.get-version.outputs.version }}_*.ipk
+            ```
+
+            For SNAPSHOT (APK):
+            ```
+            apk add ${{ env.PACKAGE_NAME }}_${{ needs.get-version.outputs.version }}_*.apk
+            ```
+
   release:
     name: Release ${{ matrix.arch }}-${{ matrix.branch }}
     needs: get-version
@@ -97,22 +121,3 @@ jobs:
           tag_name: "v${{ needs.get-version.outputs.version }}"
           files: |
             ${{ github.workspace }}/release-artifacts/*
-          generate_release_notes: true
-          draft: false
-          name: "v${{ needs.get-version.outputs.version }} Release"
-          body: |
-            ## Release v${{ needs.get-version.outputs.version }}
-
-            ### Packages
-            Packages are available for the following configurations:
-
-            ### Installation
-            For standard OpenWrt (IPK):
-            ```
-            opkg install ${{ env.PACKAGE_NAME }}_${{ needs.get-version.outputs.version }}_*.ipk
-            ```
-
-            For SNAPSHOT (APK):
-            ```
-            apk add ${{ env.PACKAGE_NAME }}_${{ needs.get-version.outputs.version }}_*.apk
-            ```

@@ -1,5 +1,9 @@
 # 🌟 luci-theme-rtawrt 🌟
 
+<p align="center">
+    <img src="https://img.shields.io/github/downloads/rizkikotet-dev/luci-theme-rtawrt/total?style=for-the-badge&logo=openwrt&labelColor=blue" alt="GitHub Downloads (all assets, all releases)">
+</p>
+
 **luci-theme-rtawrt** adalah tema HTML5 yang bersih dan modern untuk OpenWrt, dirancang berdasarkan prinsip-prinsip **Material Design**. Tema ini memberikan pengalaman pengguna yang intuitif dan responsif untuk mengelola perangkat OpenWrt Anda.
 
 ---

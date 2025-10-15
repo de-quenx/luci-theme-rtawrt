@@ -1,4 +1,4 @@
-name: Release Packages
+name: Builds Packages
 
 on:
   workflow_dispatch:
